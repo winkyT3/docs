@@ -1,0 +1,40 @@
+####Deploy####
+
+##知识点##
+####打包lua为bundle####
+1. 在virnana->Lua=>build All 会对lua进行去空格处理，并且可以生成lua jit文件。
+1. BuildAll的核心实现是调用了Tools/lua.exe 和Tools/luajit.exe工具
+1. 生成的文件在luaBundle, luaBundlejit下。在打包时，会根据这文件夹下的AssetBundleRule文件生成AssetBundle
+
+####指定哪些文件打进包里####
+在Deploy/Configs目录有3个文件可以指定：
+InstallBundles			// 指定要进包的资源文件
+InstallBundlesLua		// 指定要进包的lua文件（默认都进）
+InstallBundlesLuaJit	// 指定要进包的luajit文件（默认都进）
+
+####出新包####
+因为android和ios用到的资源格式不同，所以unity提供了切平台的方式。File->BuldSetting里。但是每次打包这样平台切换将会导致Library被清掉重新计算。很慢很慢
+因此现在解决方案是：出包都在不同的项目工程里E:\g16_client_android , E:\g16_client_ios
+出内网测试包（登陆的是开发服）流程：
+1. Game->Deploy->Asset->DevAndroid   Build出AssetBundle资源到../AssetBundleDev/Android目录
+1. Game->Dev->G16_Android_Dev  点InstallBundles 将../AssetBundleDev/Android目录下的资源按照进包规则复制到streamingAssets->AssetBundle里
+1. Game->Dev->G16_Android_Dev  点BuildPlayer 生成apk到Build/dev_android/G16.apk目录
+
+出外网测试包（登陆的是外网测试服）流程：
+1. Game->Deploy->Asset->ReleaseAndroid   Build出AssetBundle资源到../AssetBundle/Android目录
+1. Game->Dev->G16_Android  点InstallBundles 将../G16_Android/Android目录下的资源按照进包规则复制到streamingAssets->AssetBundle里
+1. Game->Dev->G16_Android  点BuildPlayer 生成apk到Build/dev_android/G16.apk目录
+
+出渠道包流程：
+1. Game->Deploy->Asset->ReleaseAndroid   Build出AssetBundle资源到../AssetBundle/Android目录
+1. Game->Dev->G16_Android_Proj  点SaveBundleList 生成/AssetBundle/Android/install_bundles.txt
+1. Game->Dev->G16_Android_Proj  点BuildPlayer 生成./sdk/android/G16目录
+1. 通知sdk组，sdk组会通过脚本把这目录下的库文件和根据install_bundles.txt过滤出的AssetBundle拷到对应的渠道包
+
+####热更新流程####
+mstsc 连 build机 192.168.9.57 packer
+1. E:\g16_client_android\u3d_proj 更新
+1. 打开工程 E:\g16_client_android\u3d_proj
+1. virnana->Lua=>build All
+1. Game->Deploy->Assets->ReleaseAndroid->Build
+1. E:\g16_client_android\AssetBundle\Android  svn提交，版本号通知运维

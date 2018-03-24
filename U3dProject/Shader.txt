@@ -1,0 +1,98 @@
+####图形渲染知识准备####
+#####缓冲区#####
+1. 颜色缓冲区(ColorBuffer)也称帧缓冲区（FrameBuffer)。shader计算出来的每个象素的最终颜色都写在这里，最后渲染到屏幕显示
+
+1. 深度缓冲区(DepthBuffer)也称ZBuffer。深度是指向素点到摄象机的距离。Z缓冲区与颜色缓冲区对应，存的是每个象素的深度值。
+	比如A物体摭挡B物体，绘制完A时，将A对应屏幕上的象素的深度值写进ZBuffer，再绘制B象素前，会先做深度测试，当Z值大于B中的Z值时，将扔掉。这样可避免层次的正确性和提高渲染效率
+	
+	
+	
+####Shader结构分析####
+```
+Shader "TestShader/UnlitShader"		// Shader路径，在为material指定shader时用到
+{
+	// 属性定义，当一个shader指定给material时，选择matherial在Inspector上可以对这些属性进行编辑
+	// 属性名字其实可以随意义定。
+	Properties
+	{	
+		// _MainTex是指在Shader用到的变量，"Texture"是在Inspector里名字, 2D是类型(UnityEditor根据这个类型创建不同的编辑属性的组件，这里是纹理选择器）
+		// "white" {} 是值   {}是什么鬼？
+		_MainTex ("Texture", 2D) = "white" {}
+	}
+	
+	// 每个Shader可以包含多个SubShader，unity自行选择能在当前显卡中跑的subshader，实不规则跨平台兼容
+	SubShader
+	{
+		// 一个Pass就是一次绘制，多个pass可以实现特殊效果，比如可以实现双面材质
+		Pass	
+		{
+			CGPROGRAM	 // cg代码的开始标记
+				// 预处理指令
+				#pragma vertex vert
+				#pragma fragment frag
+				
+				// unity提供的帮助快速编写shader的文件，提供各类接口。还有其他文件
+				#include "UnityCG.cginc"
+				
+				// 定义输入输出数据结构,名字随意。
+				// 如下：顶点着色器的输入，象素着色器的入输入（来源于顶点着色器的输出）
+				struct appdata
+				{
+					float4 vertex : POSITION;
+					float2 uv : TEXCOORD0;
+				};
+	
+				struct v2f
+				{
+					float2 uv : TEXCOORD0;
+					float4 vertex : SV_POSITION;		// #define SV_POSITION POSITION
+				};
+				
+				// 属性定义，unity会自动把Inspector里编辑的属性值赋值给这些代码里要用到的属性（要求属性名一样）
+				// 这些属性值是跟着材质球走的，即为不同的材质球指定相同的shader，调整这些不同的属性，可让材质球有不同的效果
+				sampler2D _MainTex;
+				
+				// 这个属性比较坑。在Insector中编辑纹理时可以同时编辑Tiling和Offests，Unity自动扰这些值赋值给_MainTex_ST了（name##_ST的组合）
+				// 比如下面在 TRANSFORM_TEX对uv坐标进行转换时有用到该属性： #define TRANSFORM_TEX(tex,name) (tex.xy * name##_ST.xy + name##_ST.zw)
+				// _ST是纹理采样(sampleTexture)的意思
+				float4 _MainTex_ST;
+				
+				// 顶点着色器
+				v2f vert (appdata v)
+				{
+					v2f o;
+					o.vertex = UnityObjectToClipPos(v.vertex);	// 坐标转换，那些.cginc里封装的方法。顶点坐标->世界坐标->投影坐标
+					o.uv = TRANSFORM_TEX(v.uv, _MainTex);		// UV坐标转换
+					return o;									// 输出给象素着色器
+				}
+				
+				// 象素着色器
+				fixed4 frag (v2f i) : SV_Target					// SV_Target这个是个系统值: 表示该函数返回的是用于下一个阶段OutPut Merger的颜色值
+				{
+					fixed4 col = tex2D(_MainTex, i.uv);			// tex2D是shader的语法，获得纹里坐标中颜色值
+					return col;									// 最后输出该象素的颜色值
+				}
+				
+			ENDCG		// cg代码的结束标记
+		}
+	}
+}
+```
+
+####Shader技术知识####
+1. Blend[_SrcBlend][_DstBlend]  开启颜色混合
+	在象素着色器执行完后，显卡会将该象素的颜色与缓存中的颜色计算混合。最终颜色：计算的颜色*SrcBlend + 缓存中的颜色*DstBlend
+	比如在渲染不透明物体时，会把_SrcBlend设置为1， _DstBlend设置为0。
+	设置这两个值时在Unity里有个BlendMode枚举可以方便使用
+	通过设置_DstBlend 为BlendMode.OneMinusSrcAlpha (1 - source alpha) 可以实现波璃效果
+
+1. ZWrite[_ZWrite] 是否写入深度缓冲区（默认打开）
+	
+Controls whether pixels from this object are written to the depth buffer (default is On). If you’re drawng solid objects, leave this on. If you’re drawing semitransparent effects, switch to ZWrite Off. For more details read below.
+####RenderingMode####
+1. Opaque
+	不透明度
+Cutout,
+SoftEdge,
+Transparent,
+Fade,

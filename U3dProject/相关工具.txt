@@ -1,0 +1,20 @@
+#####生成AssetBundle#####
+1. 为资源指定好AssetBundle的名字,执行脚本将会成到assetbundle到工程下AssetBundles
+1. BuildPipeline.BuildAssetBundles("AssetBundles", BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+
+#####切割动画Fbx文件#####
+1. unity支持在资源进行导入或移动时进行处理。AssetPostprocessor类
+1. OnPreprocessModel在资源导入时会执行
+1. 根据规则创建clipAnimations数组 (this.assetImporter as ModelImporter).clipAnimations = clipAnimations;
+1. 在同个文件夹下加一个规则文件指定切割规则，如，1001_Animation.split
+
+#####自动为资源指定AssetBundle名字#####
+1. 跟切割动画Fbx文件类似，AssetPostprocessor类
+1. 通过(this.assetImporter as AssetImporter).assetBundleName = assetBundleName 指定名字
+
+#####FontMaker#####
+创建一个Font。指定material。和每个字符对应的uv。程序就可以找到对应字符的纹理
+1. 创建一个texture，用PackTextures将多个纹理（如1，2，3的小纹理）合并。
+1. 创建一个材质材，将上面创建的texture指定给材质球。material.mainTexture = texture
+1. 将材质球指定给字体。font.material = material
+1. 创建CharacterInfo.记录每个字符的uv.并设置给font.characterInfo
