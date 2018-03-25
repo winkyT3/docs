@@ -1,0 +1,132 @@
+####知识点####
+1. fpx格式
+
+1. 3dmax的单和u3d的单位:
+	a. 3dmax里显示单位和系统单位之分，1显示单位物体在100系统单位下保存模型.fbx时会记录下100的存储单位，u3d在导入时会根据模型的缩放因子（默认100）导入即单位1米
+	b. fbx里还有个fileScale，默认0.01
+	c. 但在项目中与美术沟通后，3dmax系统单位设为100，导出的存储单位就是100，fileScale是0.01，然后用脚本将模型导入时强制使用fileScale为0.01，scaleFactor设为1。即最后1m等于3dmax的1米
+	
+1. 动画控制器深入了解
+1. 动作切换时的融合
+1. 粒子系统的参数了解
+1. 怎么在unity里查看uv坐标
+1. 烘焙
+1. MeshCompression 把顶点数据的精度降低，减小最终文件大小
+1. OptimizeMesh
+1. ImportBlendShapes
+1. WeldVertices 焊接顶点。在同一个位置的顶点将会被合并成一个，减少顶点数目
+1. GenerateLightmap UVs
+1. ResampleCurves  在导入动画.fbx时，角色是欧拉角描述的，u3d是用四元素来描述，需要为每帧进行转换
+1. LightProbs 
+	a. 场景里使用LightMapping后，关掉灯光后，当一个动态物体移上去将会觉得很奇怪。可以烘焙前放置业光探测器lightprobgorup组件
+	b. 烘焙后就多了那些点的颜色信息，游戏中的Renderer组件里可以设置LightProbsUsage，通过插值计算所在物体受到的灯光颜色影响
+	c. 这种计算其实有损效率，项目中实际采用的是2组灯光，烘焙时打开很多点光源，烘焙完后开启1个平行光给实际游戏中用
+
+
+1. KeepQuards 保持四边形不被切割成2个三角形，保持四边形是为了做Tessellation (曲面细分）
+	a. Tessellation (曲面细分） 可以出个粗糙的模型 ，在渲染管线里通过显卡的支持把曲面细分
+	b. 再通过Displacement Mapping (贴图置换)则可以处理成高精度的模型。避免凹凸贴图技术的假凹凸
+	c. LOD技术无法连续改变精度，Tessellation能够持续改变精度
+
+1. Renderer, MeshRender, SkinMeshRender, Mesh, MeshFilter 之前什么关系?
+	a. Render是MeshRender和SkinMeshRender的基类，描述了光照和材质信息
+	b. MeshRender结合MeshFilter起使用，MeshFilter就是一个Mesh的过滤器，就是提示一个Mesh给MeshRender使用
+	c. SkinMeshRender就是蒙皮网格渲染，多了为顶点蒙皮的骨骼(bones)
+	d. fbx文件导入unity后，如果是有骷髅的则unity会生成SkinMeshRender(如怪物)。否则用MeshRender+MeshFilter(如采集物)
+	e. Mesh可以代码创建或者unity为fbx自动生成。包含了一组顶点信息，boneWeights存储了每个顶点受骨骼影响的权重值（unity里最多受4个骨骼影响）
+
+1. skinnedMotionVectors
+
+1. depthTextureMode
+
+
+####美术制作####
+细点：
+1. 3dmax制作与u3d的单位，比例统一，
+1. 角色模型站在原点（0,0,0）点。其他的一般以物体中心放到原点
+1. 模型fbx格式，贴图tga格式，2的N次幂，尽量不超过1024*1024
+1. 模型中不带3dmax的材质球（支持不好），会在u3d中新建材质球，使用自己的StandardShader
+1. 美术一次出2个fbx文件。
+	a.模型 导出没有动作的模型、骨骼，模型需要带有蒙皮信息
+	b.动作 只有骨骼的fbx文件。骨骼的关健帧动画， 1秒钟30帧
+	
+制作模型动作流程：
+1. 美术制作好的动画模型（.fbx文件带贴图），动作切割规则文件（.split）放到共享文件夹
+1. 策划导入资源到unity的Actor文件夹
+	a.脚本会对资源参数调整（在@AssetImportRule可设置）
+	b.脚本会对动画文件进行自动切割（如果提供了规则文件)
+	c.制作prefab，把需要的组件挂在prefab上，如（AnimatorOptimizer, AttachObject)
+	d.制作相应的动画控制器
+1. 技术即可在代码使用	
+
+掉作特效流程：
+1. 美术直接在unity里制作，成品在Effects/Prefab文件夹
+	
+
+场景：
+
+####资源检查####
+CheckModel：（检查模型，主要用到ModeImporter类, Mesh类作检查)
+1. ReadableMode，
+1. ScaleFactor 检查importer.globalScale 默认是1
+1. ImportMaterialMode, 检查importer.importMaterials，默认禁止导入
+1. OptimizeModeMesh, 检查importeroptimizeMesh ，默认需开启。原理是什么？
+1. MeshCompressedMode, 检查importer.meshCompression 默认是hight, 原理是什么？
+1. NormalImportModed, 检查importer.importNormals 顶点法线的提取方式，默认import
+1. TangentImportMode, 检查importer.importTangents 顶点切线的提取方式, 默认不能提取
+1. ColliderMode， 检查importer.addCollider， 是否添加网格碰撞器
+1. SecondaryUIMode 检查importer.generateSecondaryUV 为光照贴图生成第2套UI，原理是什么？
+1. AnimationMode 检查 importer.animationType 默认是普通的（Generic）
+1. AnimationCompressMode 检查importer.animationCompression
+1. AnimationUnusedTimeLimit 什么东西？
+1. UVRangeMode				UV的范围
+1. UVTolerance				UV的容差（干啥用？）
+1. MustHaveVertexChannel   检查顶点数据，一定带有哪个通道
+1. CannotHaveVertexChannel 检查顶点数据，不能有带有哪些通道
+1. MaxVertextCount	检查mesh.vertexCount 最大顶点数量。默认5000
+1. MaxTriangleCount	检查mesh.triangles 最大三角形数量。默认5000
+1. MaxVertexTriangleRadio  什么东西？
+
+CheckAnimation：(检查动画，主要用到SkinnedMeshRenderer类)
+1. MaxBones 检查meshRenderer.bones 模型的骨骼
+1. MaxCurveCountForClip
+1. MaxKeyFrameCountForClip
+
+CheckParticlSystem (检查粒子系统，主要用到ParticleSystem类, ParticleSystem.MainModule类做检查）
+1. MaxParticleLimit  	检查partileSystem.particleCount
+1. PrewarmDurationLimit 检查mainModuel.prewarm 预热时间太长会导致计算量很大，导致卡顿
+1. ScaleingMode 检查mainModuel.scalingMode  默认是notlocal有点奇怪。看到美术都是设置成Hierarchy即受父节点的缩放影响
+
+CheckRenderer (检查渲染，主要用到Renderer类）
+1. ShadowCastingCheckMode	render.shadowCastingMode 投射阴影
+1. ReceiveShadowsMode		render.receiveShadows 接收阴影。 为啥所有角色都在开了接收阴影？
+1. LightProbsUsageMode		render.lightProbeUsage 是否使用光照探测器的影响
+1. ReflectionProbeUsageMode	render.lightProbeUsage 反射光是否使用光照探测器的影响
+1. NirvanaRenderMode		有没加自己写的NirvanaRender组件
+
+
+纹理：(主要用到TextureImporter类)
+1. ReadableMode，
+1. AlphoMode ，检查 importer.alphaIsTransparency, 当有alpha通道时，如果勾选则告诉unity这个alpha通道是用来做透明的。
+1. MaxTextureSize，检查importer.textureCompression 的压缩格式
+1. mipMapMode, 检查importer.mipmapEnabled，
+1. wrapMode, 检查importer.wrapMode   默认是紧凑的（clamp）
+1. filterMode, 检查importer.filterMode  默认是双线性插值（Bilinear）
+
+材质球：
+
+
+####导入设置####
+
+
+####后期处理####
+
+
+####问题####
+1. 面数的规格限制是多少？
+1. 每个动作的帧数有没规格限制？
+1. importVisiblity, importCamera, importLights 好像都可以不用勾选
+1. 角色模型的ReceiveShadows不开启会不会露陷
+1. 角色模型的SkinMeshRenderer开启了LightProbs,ReflectionProbs,MotionVector， 这3个我们都是没有用的
+1. 角色模型中的SkinMeshRnderer中的Quality能不能调为2 Bones。默认设置是4个
+1. 角色模型中的SkinedMotionVectors能不能关掉

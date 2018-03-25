@@ -16,16 +16,19 @@ InstallBundlesLuaJit	// 指定要进包的luajit文件（默认都进）
 因为android和ios用到的资源格式不同，所以unity提供了切平台的方式。File->BuldSetting里。但是每次打包这样平台切换将会导致Library被清掉重新计算。很慢很慢
 因此现在解决方案是：出包都在不同的项目工程里E:\g16_client_android , E:\g16_client_ios
 出内网测试包（登陆的是开发服）流程：
+1. virnana->Lua=>build All
 1. Game->Deploy->Asset->DevAndroid   Build出AssetBundle资源到../AssetBundleDev/Android目录
 1. Game->Dev->G16_Android_Dev  点InstallBundles 将../AssetBundleDev/Android目录下的资源按照进包规则复制到streamingAssets->AssetBundle里
 1. Game->Dev->G16_Android_Dev  点BuildPlayer 生成apk到Build/dev_android/G16.apk目录
 
 出外网测试包（登陆的是外网测试服）流程：
+1. virnana->Lua=>build All
 1. Game->Deploy->Asset->ReleaseAndroid   Build出AssetBundle资源到../AssetBundle/Android目录
 1. Game->Dev->G16_Android  点InstallBundles 将../G16_Android/Android目录下的资源按照进包规则复制到streamingAssets->AssetBundle里
 1. Game->Dev->G16_Android  点BuildPlayer 生成apk到Build/dev_android/G16.apk目录
 
 出渠道包流程：
+1. virnana->Lua=>build All
 1. Game->Deploy->Asset->ReleaseAndroid   Build出AssetBundle资源到../AssetBundle/Android目录
 1. Game->Dev->G16_Android_Proj  点SaveBundleList 生成/AssetBundle/Android/install_bundles.txt
 1. Game->Dev->G16_Android_Proj  点BuildPlayer 生成./sdk/android/G16目录
